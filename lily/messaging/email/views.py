@@ -25,7 +25,7 @@ from django.views.generic.base import View
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 from oauth2client.client import OAuth2WebServerFlow
-from oauth2client.contrib.django_orm import Storage
+from oauth2client.client import Storage
 
 from lily.accounts.models import Account
 from lily.contacts.models import Contact

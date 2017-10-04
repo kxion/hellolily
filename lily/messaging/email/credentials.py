@@ -1,5 +1,5 @@
 import logging
-from oauth2client.contrib.django_orm import Storage
+from oauth2client.client import Storage
 
 from .models.models import GmailCredentialsModel
 

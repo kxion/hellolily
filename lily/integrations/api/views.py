@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.db import transaction, IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect, HttpResponseBadRequest
 from django.utils.translation import ugettext_lazy as _
-from oauth2client.contrib.django_orm import Storage
+from oauth2client.client import Storage
 from rest_framework import status
 from rest_framework.parsers import FormParser, JSONParser
 from rest_framework.response import Response

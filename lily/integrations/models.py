@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-from oauth2client.contrib.django_orm import CredentialsField
+from oauth2client.contrib.django_util.models import CredentialsField
 
 from lily.contacts.models import Contact
 from lily.deals.models import Deal, DealStatus, DealNextStep

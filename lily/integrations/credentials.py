@@ -3,7 +3,7 @@ from datetime import timedelta
 import requests
 from django.utils import timezone
 from oauth2client.client import Credentials
-from oauth2client.contrib.django_orm import Storage
+from oauth2client.client import Storage
 
 from .models import IntegrationCredentials, IntegrationDetails, IntegrationType
 

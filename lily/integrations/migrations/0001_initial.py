@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 from django.db import models, migrations
 import django.utils.timezone
-import oauth2client.contrib.django_orm
+import oauth2client.contrib.django_util
 
 
 class Migration(migrations.Migration):
@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
             name='IntegrationCredentials',
             fields=[
                 ('details', models.OneToOneField(primary_key=True, serialize=False, to='integrations.IntegrationDetails')),
-                ('credentials', oauth2client.contrib.django_orm.CredentialsField(null=True)),
+                ('credentials', oauth2client.contrib.django_util.models.CredentialsField(null=True)),
             ],
             options={
             },

@@ -26,7 +26,7 @@ import base64
 import hmac
 import time
 
-from oauth2client import util
+from oauth2client import _helpers
 
 
 # Delimiter character
@@ -36,7 +36,7 @@ DELIMITER = ':'
 DEFAULT_TIMEOUT_SECS = 1*60*60
 
 
-@util.positional(2)
+@_helpers.positional(2)
 def generate_token(key, user_id, action_id="", when=None):
     """Generates a URL-safe token for the given user, action, time tuple.
 
@@ -66,7 +66,7 @@ def generate_token(key, user_id, action_id="", when=None):
     return token
 
 
-@util.positional(3)
+@_helpers.positional(3)
 def validate_token(key, token, user_id, action_id="", current_time=None):
     """Validates that the given token authorizes the user for the action.
 
