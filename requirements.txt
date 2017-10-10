@@ -132,7 +132,7 @@ chardet==3.0.4  # Old version in case of issues is: 2.3.0
 newrelic==2.92.0.78
 pycrypto==2.6.1  # Old version is: 2.6
 requests==2.18.4
-grequests==0.3.0
+requests-futures==0.9.7
 unicodecsv==0.13.0
 urllib3==1.22
 freemail==1.2.17
