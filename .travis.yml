@@ -83,7 +83,7 @@ script:
   - overcommit --run
 
   # Once the db has started, run the tests and output coverage and results.
-  - ./ci/run_tests.sh
+  - travis_wait ./ci/run_tests.sh
 
   # Try a merge to see if there are merge conflicts but do not push yet.
   - ./ci/git_merge.sh
