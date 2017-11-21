@@ -1,4 +1,4 @@
-version: '2.1'
+version: '2.3'
 
 networks:
   internal:
@@ -6,7 +6,7 @@ networks:
 
 services:
   rabbit:
-    image: rabbitmq:3.6-management  # Use latest version of 3.6 with management plugin enabled.
+    image: rabbitmq:3.6-management-alpine  # Use latest version of 3.6 with management plugin enabled.
     networks:
       internal:
     ports:
@@ -14,10 +14,13 @@ services:
     logging:
       driver: "none"
     healthcheck:
-      test: nc -z 5672
+      test: nc -z localhost:5672
+      timeout: 1s
+      retries: 5
+      start_period: 2s
 
   redis:
-    image: redis:2.8  # Use latest version of 2.8.
+    image: redis:3-alpine
     networks:
       internal:
     ports:
@@ -25,18 +28,26 @@ services:
     logging:
       driver: "none"
     healthcheck:
-      test: nc -z 6379
+      test: nc -z localhost:6379
+      timeout: 1s
+      retries: 5
+      start_period: 2s
 
   db:
-    image: "hellolily/hellolily-db:latest"
+    image: "postgres:9.5-alpine"
     networks:
       internal:
     ports:
       - "5433:5432"
+    volumes:
+    - ./Dockers/db:/docker-entrypoint-initdb.d
     logging:
       driver: "none"
     healthcheck:
-      test: nc -z 5432
+      test: nc -z localhost:5432
+      timeout: 1s
+      retries: 5
+      start_period: 6s
 
   es:
     image: elasticsearch:1.7-alpine  # Use latest version of 1.7.
@@ -47,7 +58,10 @@ services:
     logging:
       driver: "none"
     healthcheck:
-      test: nc -z 9200
+      test: nc -z localhost:9200
+      timeout: 1s
+      retries: 5
+      start_period: 2s
 
   app:
     image: "hellolily/hellolily-app:latest"
