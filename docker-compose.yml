@@ -1,4 +1,4 @@
-version: '2.3'
+version: '2.1'
 
 networks:
   internal:
@@ -17,7 +17,6 @@ services:
       test: nc -z localhost:5672
       timeout: 1s
       retries: 5
-      start_period: 2s
 
   redis:
     image: redis:3-alpine
@@ -31,7 +30,6 @@ services:
       test: nc -z localhost:6379
       timeout: 1s
       retries: 5
-      start_period: 2s
 
   db:
     image: "postgres:9.5-alpine"
@@ -47,7 +45,6 @@ services:
       test: nc -z localhost:5432
       timeout: 1s
       retries: 5
-      start_period: 6s
 
   es:
     image: elasticsearch:1.7-alpine  # Use latest version of 1.7.
@@ -61,7 +58,6 @@ services:
       test: nc -z localhost:9200
       timeout: 1s
       retries: 5
-      start_period: 2s
 
   app:
     image: "hellolily/hellolily-app:latest"
