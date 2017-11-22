@@ -82,9 +82,15 @@
                 window.Select2.util.markMatch(result.name, query.term, nameMarkup, escapeMarkup);
                 window.Select2.util.markMatch(result.email_address, query.term, emailMarkup, escapeMarkup);
 
+                let accounts = '';
+
+                if (result.accounts && result.accounts.length) {
+                    accounts = ` (${result.accounts.map(account => account.name).join(', ')})`;
+                }
+
                 resultRow =
                     '<div>' +
-                    '<div>' + nameMarkup.join('') + '</div>' +
+                    '<div>' + nameMarkup.join('') + accounts + '</div>' +
                     '<div class="text-muted">' + emailMarkup.join('') + '</div>' +
                     '</div>';
             } else {
@@ -141,13 +147,13 @@
                                 }
 
                                 if ($this.hasClass(cf.tagsAjaxClass) && !_data.tags) {
-                                    // Search for contacts or accounts that matches the search term and have an email address, and
+                                    // Search for contacts or accounts that match the search term and have an email address, and
                                     // where the contact belongs to one or more accounts, and are active at at least one account,
-                                    // or contacts that don't belong to an account at all,
+                                    // or contacts that don't belong to an account at all.
                                     filterQuery = '((_type:contacts_contact AND active_at:(*) AND (full_name:(' + term + ') OR email_addresses.email_address:(' + term + '))) ' +
                                         'OR (_type:contacts_contact AND NOT active_at:(*) AND NOT accounts:(*) AND (full_name:(' + term + ') OR email_addresses.email_address:(' + term + '))) ' +
                                         'OR (_type:accounts_account AND (full_name:(' + term + ') OR email_addresses.email_address:(' + term + ')))) ' +
-                                        'AND email_addresses.email_address:*';
+                                        'AND (email_addresses.email_address:* AND email_addresses.is_active:true)';
 
                                     data = {
                                         filterquery: filterQuery,
@@ -197,46 +203,47 @@
                             },
 
                             results: function(data, page) {
-                                var usedText;
-                                var displayedText;
-                                var i;
-
-                                var more = (page * cf.ajaxPageLimit) < data.total; // whether or not there are more results available
-                                var parsedData = [];
-
                                 if ($this.hasClass(cf.tagsAjaxClass) && !_data.tags) {
-                                    data.hits.forEach(function(hit) {
-                                        var displayedName;
+                                    const parsedData = [];
 
+                                    data.hits.forEach(hit => {
                                         // Only display contacts with an email address.
-                                        for (i = 0; i < hit.email_addresses.length; i++) {
-                                            if (hit.hasOwnProperty('full_name')) {
-                                                displayedName = hit.full_name;
-                                            } else {
-                                                displayedName = hit.name;
+                                        for (let i = 0; i < hit.email_addresses.length; i++) {
+                                            const displayedName = hit.full_name || hit.name;
+                                            const email = hit.email_addresses[i].email_address;
+                                            const domain = email.split('@').slice(-1)[0];
+
+                                            // The text which is actually used in the application.
+                                            const usedText = `"${displayedName}" <${email}>`;
+                                            // The displayed text.
+                                            const displayedText = `${displayedName} <${email}>`;
+
+                                            let accounts = hit.accounts.filter(account => account.domain.includes(domain));
+
+                                            if (!accounts.length) {
+                                                accounts = hit.accounts;
                                             }
 
-                                            // The text which is actually used in the application
-                                            usedText = '"' + displayedName + '" <' + hit.email_addresses[i].email_address + '>';
-                                            // The displayed text
-                                            displayedText = displayedName + ' <' + hit.email_addresses[i].email_address + '>';
-
-                                            // Select2 sends 'id' as the value, but we want to use the email
-                                            // So store the actual id (hit.id) under a different name
-                                            parsedData.push({
+                                            // Select2 sends 'id' as the value, but we want to use the email.
+                                            // So store the actual id (hit.id) under a different name.
+                                            const contact = {
+                                                accounts,
                                                 id: usedText,
                                                 text: displayedText,
-                                                name: hit.name,
+                                                name: displayedName,
                                                 email_address: hit.email_addresses[i].email_address,
                                                 object_id: hit.id,
-                                            });
+                                            };
+
+                                            parsedData.push(contact);
                                         }
                                     });
 
-                                    // Array elements with empty text can't be added to select2, so manually fill a new array
+                                    // Array elements with empty text can't be added to select2,
+                                    // so manually fill a new array.
                                     data.hits = parsedData;
                                 } else {
-                                    data.hits.forEach(function(hit) {
+                                    data.hits.forEach(hit => {
                                         hit.text = hit.name;
                                     });
                                 }
@@ -245,6 +252,8 @@
                                 if ((page === 1 && !$this.hasClass(cf.tagsAjaxClass)) && !_data.tags) {
                                     data.hits.unshift({id: '', text: cf.clearText});
                                 }
+
+                                const more = (page * cf.ajaxPageLimit) < data.total;
 
                                 return {
                                     results: data.hits,
