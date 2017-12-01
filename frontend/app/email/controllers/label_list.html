@@ -9,7 +9,7 @@
 <ul class="email-nav">
     <collapsable name="all-accounts">
         <li class="email-nav-header">
-            <div class="email-nav-header-title" ng-click="vm.clickAccountHeader()">
+            <div class="email-nav-header-title" ng-click="vm.clickAccountHeader()" ng-class="{'active-account': !$state.params.accountId}">
                 All mailboxes
             </div>
             <collapsable-button></collapsable-button>

@@ -161,6 +161,11 @@
                     <i ng-class="{'fa fa-star': message.is_starred, 'fa fa-star-o': !message.is_starred}" ng-click="vm.toggleStarred(message)"></i>
                 </td>
                 <td contact-icon message="message"></td>
+                <td>
+                    <div class="account-label">
+                        {{ message.account.name }}
+                    </div>
+                </td>
                 <td class="view-message hidden-xs" ng-show="vm.label.name != 'Sent' && vm.label.name != 'Draft'" ui-sref="base.email.detail({id: message.id})">
                     <span ng-show="message.sender_name" title="{{ message.sender_email }}">{{ message.sender_name }}</span>
                     <span ng-hide="message.sender_name">{{ message.sender_email }}</span>

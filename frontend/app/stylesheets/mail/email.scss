@@ -682,3 +682,17 @@ div {
 .fa-star {
     color: $app-color-yellow;
 }
+
+.account-label {
+    background: $app-color-darkblue;
+    border: 1px solid darken($app-color-purple, 50%);
+    border-radius: $base-border-radius;
+    padding: 2px 4px;
+    color: #fff;
+    width: 60px;
+    font-size: 80%;
+    text-align: center;
+    font-weight: 200;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
