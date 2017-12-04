@@ -1,6 +1,3 @@
-import json
-
-from channels import Group
 from django.contrib.staticfiles.templatetags.staticfiles import static
 from rest_framework import viewsets, mixins
 from rest_framework.decorators import list_route
@@ -95,14 +92,6 @@ class CallViewSet(viewsets.ModelViewSet):
                     'number': caller_number,
                 },
             }
-
-        # Sends the data as a notification event to the user who picked up the phone.
-        Group('user-%s' % called_user.id).send({
-            'text': json.dumps({
-                'event': 'notification',
-                'data': data,
-            }),
-        })
 
         return response
 

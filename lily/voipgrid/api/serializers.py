@@ -1,8 +1,6 @@
-import json
 import logging
 from copy import copy
 
-from channels import Group
 from django.contrib.staticfiles.templatetags.staticfiles import static
 from django.db import IntegrityError
 from django.utils.translation import ugettext_lazy as _
@@ -139,14 +137,7 @@ class CallNotificationSerializer(serializers.Serializer):
         cr = create_or_get(CallRecord, lookup={'call_id': data['call_id']}, data=data)
 
         user_list = LilyUser.objects.filter(internal_number=destination['account_number'])
-        for user in user_list:
-            # Sends the data as a notification event to the users.
-            Group('user-%s' % user.id).send({
-                'text': json.dumps({
-                    'event': 'notification',
-                    'data': caller_meta
-                }),
-            })
+        print user_list
 
         return cr
 
@@ -305,16 +296,10 @@ class CallNotificationV2Serializer(serializers.Serializer):
                     'id': source.id,
                 },
             }
+        print data
 
         user_list = LilyUser.objects.filter(internal_number__in=internal_numbers)
-        for user in user_list:
-            # Sends the data as a notification event to the users.
-            Group('user-{}'.format(user.id)).send({
-                'text': json.dumps({
-                    'event': 'notification',
-                    'data': data
-                }),
-            })
+        print user_list
 
     def save_participant(self, data):
         number = data['number'] or ''

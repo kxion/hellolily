@@ -12,6 +12,10 @@ RUN apk add --no-cache \
     nodejs \
     libjpeg-turbo-dev
 
+RUN echo "@edge-community http://dl-cdn.alpinelinux.org/alpine/edge/community" >> /etc/apk/repositories
+RUN apk add --no-cache \
+    py-gevent@edge-community
+
 # https://docs.docker.com/engine/userguide/eng-image/dockerfile_best-practices/#/add-or-copy
 COPY requirements.txt requirements.txt
 COPY requirements-dev.txt requirements-dev.txt

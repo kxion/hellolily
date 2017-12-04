@@ -1,6 +1,3 @@
-import anyjson
-
-from channels import Group
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 
@@ -100,23 +97,10 @@ class CaseSerializer(WritableNestedSerializer):
         })
 
         if assigned_to:
-            Group('tenant-%s' % user.tenant.id).send({
-                'text': anyjson.dumps({
-                    'event': 'case-assigned',
-                }),
-            })
-
             if assigned_to.get('id') != user.pk:
                 validated_data.update({
                     'newly_assigned': True,
                 })
-
-        else:
-            Group('tenant-%s' % user.tenant.id).send({
-                'text': anyjson.dumps({
-                    'event': 'case-unassigned',
-                }),
-            })
 
         return super(CaseSerializer, self).create(validated_data)
 
@@ -148,23 +132,6 @@ class CaseSerializer(WritableNestedSerializer):
             # Case is unassigned, so clear newly assigned flag.
             validated_data.update({
                 'newly_assigned': False,
-            })
-
-        if 'assigned_to' in validated_data or instance.assigned_to_id:
-            Group('tenant-%s' % user.tenant.id).send({
-                'text': anyjson.serialize({
-                    'event': 'case-assigned',
-                }),
-            })
-
-        if (not instance.assigned_to_id or
-                instance.assigned_to_id and
-                'assigned_to' in validated_data and
-                not validated_data.get('assigned_to')):
-            Group('tenant-%s' % user.tenant.id).send({
-                'text': anyjson.serialize({
-                    'event': 'case-unassigned',
-                }),
             })
 
         return super(CaseSerializer, self).update(instance, validated_data)
