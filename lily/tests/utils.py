@@ -1,15 +1,14 @@
+from datetime import date, datetime, timedelta
+from decimal import Decimal
+import json
 from urllib import urlencode
 
-from datetime import datetime, timedelta, date
-import json
-
-from django_elasticsearch_dsl.registries import registry
-from oauth2client import GOOGLE_TOKEN_URI
-from oauth2client.client import OAuth2Credentials
-
-from decimal import Decimal
 from django.contrib.auth.models import AnonymousUser, Group
 from django.db.models import Manager, Model
+from django_elasticsearch_dsl.registries import registry
+from mock import Mock, patch
+from oauth2client import GOOGLE_TOKEN_URI
+from oauth2client.client import OAuth2Credentials
 from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework.test import APIClient, APITestCase
@@ -113,6 +112,7 @@ class CompareObjectsMixin(object):
     """
     Baseclass that provides functionality for tests that compare objects.
     """
+
     def assertStatus(self, request, desired_code, original_data=None):
         """
         Helper function to assert that the response of the API is what is expected.
@@ -190,7 +190,29 @@ class GenericAPITestCase(CompareObjectsMixin, UserBasedTest, APITestCase):
     factory_cls = None
     model_cls = None
     serializer_cls = None
-    ordering = ('-id', )  # Default ordering field
+    ordering = ('-id',)  # Default ordering field
+
+    def setUp(self):
+        super(GenericAPITestCase, self).setUp()
+
+        self.elasticsearch_buffer = Mock()
+
+        self._elastic_serializer_patcher = patch(
+            'lily.api.nested.serializers.ActionBuffer',
+            Mock(return_value=self.elasticsearch_buffer)
+        )
+        self._elastic_serializer_patcher.start()
+
+        self._elastic_mixins_patcher = patch(
+            'lily.api.mixins.ActionBuffer',
+            Mock(return_value=self.elasticsearch_buffer)
+        )
+        self._elastic_mixins_patcher.start()
+
+    def tearDown(self):
+        self._elastic_mixins_patcher.stop()
+        self._elastic_serializer_patcher.stop()
+        super(GenericAPITestCase, self).tearDown()
 
     def __call__(self, result=None):
         """
@@ -339,6 +361,9 @@ class GenericAPITestCase(CompareObjectsMixin, UserBasedTest, APITestCase):
         db_obj = self.model_cls.objects.get(pk=created_id)
         self._compare_objects(db_obj, json.loads(request.content))
 
+        self.elasticsearch_buffer.add_model_actions.assert_called_with(db_obj)
+        self.elasticsearch_buffer.execute.assert_called_once()
+
     def test_create_object_tenant_filter(self):
         """
         Test that the tenant is set correctly on the new object.
@@ -352,6 +377,9 @@ class GenericAPITestCase(CompareObjectsMixin, UserBasedTest, APITestCase):
         db_obj = self.model_cls.objects.get(pk=request.data.get('id'))
         self.assertEqual(self.user_obj.tenant, db_obj.tenant)
 
+        self.elasticsearch_buffer.add_model_actions.assert_called_with(db_obj)
+        self.elasticsearch_buffer.execute.assert_called_once()
+
     def test_update_object_unauthenticated(self):
         """
         Test that an unauthenticated user doesn't have the access to update an object.
@@ -363,6 +391,9 @@ class GenericAPITestCase(CompareObjectsMixin, UserBasedTest, APITestCase):
         request = self.anonymous_user.put(self.get_url(self.detail_url, kwargs={'pk': db_obj.pk}), stub_dict)
         self.assertStatus(request, status.HTTP_403_FORBIDDEN, stub_dict)
         self.assertEqual(request.data, {u'detail': u'Authentication credentials were not provided.'})
+
+        self.elasticsearch_buffer.add_model_actions.assert_not_called()
+        self.elasticsearch_buffer.execute.assert_not_called()
 
     def test_update_object_authenticated(self):
         """
@@ -381,6 +412,9 @@ class GenericAPITestCase(CompareObjectsMixin, UserBasedTest, APITestCase):
         db_obj = self.model_cls.objects.get(pk=created_id)
         self._compare_objects(db_obj, request.data)
 
+        self.elasticsearch_buffer.add_model_actions.assert_called_with(db_obj)
+        self.elasticsearch_buffer.execute.assert_called_once()
+
     def test_update_object_deleted_filter(self):
         """
         Test that deleted objects can't be updated.
@@ -395,6 +429,9 @@ class GenericAPITestCase(CompareObjectsMixin, UserBasedTest, APITestCase):
         self.assertStatus(request, status.HTTP_404_NOT_FOUND, stub_dict)
         self.assertEqual(request.data, {u'detail': u'Not found.'})
 
+        self.elasticsearch_buffer.add_model_actions.assert_not_called()
+        self.elasticsearch_buffer.execute.assert_not_called()
+
     def test_update_object_tenant_filter(self):
         """
         Test that users from different tenants can't update each other's data.
@@ -407,6 +444,9 @@ class GenericAPITestCase(CompareObjectsMixin, UserBasedTest, APITestCase):
         self.assertStatus(request, status.HTTP_404_NOT_FOUND, stub_dict)
         self.assertEqual(request.data, {u'detail': u'Not found.'})
 
+        self.elasticsearch_buffer.add_model_actions.assert_not_called()
+        self.elasticsearch_buffer.execute.assert_not_called()
+
     def test_delete_object_unauthenticated(self):
         """
         Test that an unauthenticated user doesn't have the access to delete an object.
@@ -417,6 +457,9 @@ class GenericAPITestCase(CompareObjectsMixin, UserBasedTest, APITestCase):
         request = self.anonymous_user.delete(self.get_url(self.detail_url, kwargs={'pk': db_obj.pk}))
         self.assertStatus(request, status.HTTP_403_FORBIDDEN)
         self.assertEqual(request.data, {u'detail': u'Authentication credentials were not provided.'})
+
+        self.elasticsearch_buffer.add_model_actions.assert_not_called()
+        self.elasticsearch_buffer.execute.assert_not_called()
 
     def test_delete_object_authenticated(self):
         """
@@ -434,6 +477,12 @@ class GenericAPITestCase(CompareObjectsMixin, UserBasedTest, APITestCase):
             with self.assertRaises(self.model_cls.DoesNotExist):
                 self.model_cls.objects.get(pk=db_obj.pk)
 
+        # TODO: Find some way to check the deleted object was passed to ES.
+        # instance.delete() rewrites the model, so db_obj and the call_arg
+        # object don't match.
+        self.elasticsearch_buffer.add_model_actions.assert_called_once()
+        self.elasticsearch_buffer.execute.assert_called_once()
+
     def test_delete_object_deleted_filter(self):
         set_current_user(self.user_obj)
         db_obj = self._create_object()
@@ -442,6 +491,9 @@ class GenericAPITestCase(CompareObjectsMixin, UserBasedTest, APITestCase):
         request = self.user.delete(self.get_url(self.detail_url, kwargs={'pk': db_obj.pk}))
         self.assertStatus(request, status.HTTP_404_NOT_FOUND)
         self.assertEqual(request.data, {u'detail': u'Not found.'})
+
+        self.elasticsearch_buffer.add_model_actions.assert_not_called()
+        self.elasticsearch_buffer.execute.assert_not_called()
 
     def test_delete_object_tenant_filter(self):
         """
@@ -453,6 +505,9 @@ class GenericAPITestCase(CompareObjectsMixin, UserBasedTest, APITestCase):
         request = self.other_tenant_user.delete(self.get_url(self.detail_url, kwargs={'pk': db_obj.pk}))
         self.assertStatus(request, status.HTTP_404_NOT_FOUND)
         self.assertEqual(request.data, {u'detail': u'Not found.'})
+
+        self.elasticsearch_buffer.add_model_actions.assert_not_called()
+        self.elasticsearch_buffer.execute.assert_not_called()
 
 
 def get_url_with_query(name, params={}, *args, **kwargs):

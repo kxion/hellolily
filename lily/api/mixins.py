@@ -3,6 +3,7 @@ import json
 
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django_elasticsearch_dsl.actions import ActionBuffer
 from rest_framework.decorators import detail_route
 from rest_framework.exceptions import ValidationError
 from rest_framework.fields import empty
@@ -258,3 +259,39 @@ class PhoneNumberFormatMixin(object):
                     phone.save()
 
         return instance
+
+
+class ElasticModelMixin(object):
+    """
+    Destroy a model instance and remove it from Elasticsearch.
+    """
+
+    def _get_elasticsearch_serializer(self):
+        # Import locally to get around a circular dependency issue.
+        from lily.api.nested.serializers import WritableNestedSerializer
+        return WritableNestedSerializer
+
+    def perform_destroy(self, instance):
+        action_buffer = ActionBuffer()
+        action_buffer.add_model_actions(instance, 'delete')
+        action_buffer.execute()
+
+        instance.delete()
+
+        return instance
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+
+        if not isinstance(serializer, self._get_elasticsearch_serializer()):
+            action_buffer = ActionBuffer()
+            action_buffer.add_model_actions(instance)
+            action_buffer.execute()
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+
+        if not isinstance(serializer, self._get_elasticsearch_serializer()):
+            action_buffer = ActionBuffer()
+            action_buffer.add_model_actions(instance)
+            action_buffer.execute()
