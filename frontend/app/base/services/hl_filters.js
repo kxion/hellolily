@@ -6,9 +6,11 @@ function HLFilters() {
         let filterStrings = [];
         let specialFilterStrings = [];
         let separateFilterStrings = [];
+        let accountFilterStrings = [];
         let filterList = viewModel.filterList;
 
         viewModel.table.filterQuery = '';
+        viewModel.table.accountFilter = '';
 
         if (hasClearButtons) {
             this._displayClearButtons(viewModel);
@@ -34,6 +36,9 @@ function HLFilters() {
                     } else {
                         filterStrings.push(filter.value);
                     }
+                    if (filter.id === 'account') {
+                        accountFilterStrings.push(filter.value);
+                    }
                 }
             }
         });
@@ -50,6 +55,10 @@ function HLFilters() {
         if (separateFilterStrings.length) {
             filterStrings.push('(' + separateFilterStrings.join(' OR ') + ')');
         }
+        //
+        // if (accountFilterStrings.length) {
+        //     filterStrings.push( accountFilterStrings.join(',') );
+        // }
 
         if (viewModel.table.usersFilter) {
             filterStrings.push('(' + viewModel.table.usersFilter + ')');
@@ -57,6 +66,9 @@ function HLFilters() {
 
         // Finally join all filters AND-wise.
         viewModel.table.filterQuery = filterStrings.join(' AND ');
+        if (accountFilterStrings.length) {
+            viewModel.table.accountFilter = accountFilterStrings.join(',');
+        }
     };
 
     this._displayClearButtons = viewModel => {

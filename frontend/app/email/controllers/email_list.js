@@ -77,6 +77,7 @@ function EmailListController($scope, $state, $stateParams, EmailAccount, EmailLa
     vm.setSearchQuery = setSearchQuery;
     vm.handleSelect = handleSelect;
     vm.showMoveToButton = showMoveToButton;
+    vm.listEmailAddresses = listEmailAddresses;
 
     function handleSelect(index, event) {
         // Keep track of the previously clicked item.
@@ -386,44 +387,7 @@ function EmailListController($scope, $state, $stateParams, EmailAccount, EmailLa
     }
 
     function _reloadMessages() {
-        var filterquery = [];
-
-        if ($stateParams.labelId) {
-            if ($stateParams.labelId === 'INBOX') {
-                filterquery.push('is_trashed:false');
-                filterquery.push('is_spam:false');
-                filterquery.push('is_archived:false');
-                filterquery.push('NOT label_id:SENT');
-            } else if ($stateParams.labelId === 'SENT') {
-                filterquery.push('label_id:SENT');
-                filterquery.push('is_trashed:false');
-                filterquery.push('is_spam:false');
-            } else if ($stateParams.labelId === 'TRASH') {
-                filterquery.push('(is_trashed:true OR is_deleted:false)');
-                filterquery.push('is_spam:false');
-            } else if ($stateParams.labelId === 'SPAM') {
-                filterquery.push('is_spam:true');
-                filterquery.push('is_trashed:false');
-            } else if ($stateParams.labelId === 'DRAFT') {
-                filterquery.push('is_draft:true');
-                // Discarded drafts are marked as trashed, so don't show them in the listing anymore.
-                filterquery.push('is_trashed:false');
-            } else {
-                // User labels.
-                filterquery.push('label_id:' + $stateParams.labelId);
-                filterquery.push('is_trashed:false');
-                filterquery.push('is_spam:false');
-            }
-        } else {
-            // Corresponds with the 'All mail'-label.
-            filterquery.push('is_trashed:false');
-            filterquery.push('is_spam:false');
-            filterquery.push('is_draft:false');
-            filterquery.push('NOT label_id:SENT');
-        }
-
         if ($stateParams.accountId) {
-            filterquery.push('account.id:' + $stateParams.accountId);
 
             if ($stateParams.labelId) {
                 // Get the label for the given accountId.
@@ -445,15 +409,12 @@ function EmailListController($scope, $state, $stateParams, EmailAccount, EmailLa
             vm.label = {id: $stateParams.labelId, name: _normalizeLabel($stateParams.labelId)};
         }
 
-        if (filterquery) {
-            filterquery = filterquery.join(' AND ');
-        }
-
         EmailMessage.search({
-            filterquery: filterquery,
             q: vm.table.searchQuery,
             size: vm.table.pageSize,
             page: vm.table.page,
+            account: $stateParams.accountId,
+            label: $stateParams.labelId,
         }, function(data) {
             var i;
             var emailMessageIndex = data.hits.length;
@@ -482,5 +443,18 @@ function EmailListController($scope, $state, $stateParams, EmailAccount, EmailLa
     function _normalizeLabel(label) {
         var normalizedLabel = label.toLowerCase();
         return normalizedLabel.charAt(0).toUpperCase() + normalizedLabel.substring(1);
+    }
+
+    function listEmailAddresses(addresses) {
+        var str = '';
+        var i;
+        for (i = 0; i < addresses.length; i++) {
+            if (addresses[i].name) {
+                str += addresses[i].name + ', ';
+            } else {
+                str += addresses[i].email_address + ', ';
+            }
+        }
+        return str.substring(0, str.length-2);
     }
 }

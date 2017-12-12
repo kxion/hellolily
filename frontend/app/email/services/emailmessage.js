@@ -57,10 +57,8 @@ function EmailMessage($resource, $q) {
             },
             search: {
                 method: 'GET',
-                url: '/search/search/',
+                url: 'api/messaging/email/search/',
                 params: {
-                    user_email_related: 1,
-                    type: 'email_emailmessage',
                     sort: '-sent_date',
                     size: 20,
                 },

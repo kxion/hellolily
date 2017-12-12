@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.fields import CurrentUserDefault
 from templated_email import send_templated_mail
 
 from lily.api.fields import DynamicQuerySetPrimaryKeyRelatedField
@@ -71,38 +72,6 @@ class EmailAttachmentSerializer(serializers.ModelSerializer):
             'cid',
             'name',
             'url',
-        )
-
-
-class EmailMessageSerializer(serializers.ModelSerializer):
-    account = serializers.PrimaryKeyRelatedField(read_only=True)
-    sender = RecipientSerializer(many=False, read_only=True)
-    received_by = RecipientSerializer(many=True, read_only=True)
-    received_by_cc = RecipientSerializer(many=True, read_only=True)
-    attachments = EmailAttachmentSerializer(many=True, read_only=True)
-    labels = EmailLabelSerializer(many=True, read_only=True)
-    sent_date = serializers.ReadOnlyField()
-
-    class Meta:
-        model = EmailMessage
-        fields = (
-            'id',
-            'account',
-            'labels',
-            'sent_date',
-            'body_html',
-            'body_text',
-            'received_by',
-            'received_by_cc',
-            'sender',
-            'attachments',
-            'read',
-            'subject',
-            'is_starred',
-            'is_spam',
-            'is_draft',
-            'is_archived',
-            'reply_to',
         )
 
 
@@ -279,6 +248,139 @@ class EmailAccountSerializer(WritableNestedSerializer):
             'shared_email_configs',
         )
     read_only_fields = ('email_address', 'is_authorized', 'is_syncing', 'is_public',)
+
+
+# class EmailMessageSerializer(serializers.ModelSerializer):
+#     # TODO: update this serializer with privacy shizzle
+#
+#     account = serializers.PrimaryKeyRelatedField(read_only=True)
+#     sender = RecipientSerializer(many=False, read_only=True)
+#     received_by = RecipientSerializer(many=True, read_only=True)
+#     received_by_cc = RecipientSerializer(many=True, read_only=True)
+#     attachments = EmailAttachmentSerializer(many=True, read_only=True)
+#     labels = EmailLabelSerializer(many=True, read_only=True)
+#     sent_date = serializers.ReadOnlyField()
+#
+#     class Meta:
+#         model = EmailMessage
+#         fields = (
+#             'id',
+#             'account',
+#             'labels',
+#             'sent_date',
+#             'body_html',
+#             'body_text',
+#             'received_by',
+#             'received_by_cc',
+#             'sender',
+#             'attachments',
+#             'read',
+#             'subject',
+#             'is_starred',
+#             'is_spam',
+#             'is_draft',
+#             'is_archived',
+#             'reply_to',
+#         )
+
+
+class EmailMessageSerializer(serializers.ModelSerializer):
+    account = EmailAccountSerializer(read_only=True)
+    sender = RecipientSerializer(many=False, read_only=True)
+    received_by = RecipientSerializer(many=True, read_only=True)
+    received_by_cc = RecipientSerializer(many=True, read_only=True)
+    attachments = EmailAttachmentSerializer(many=True, read_only=True)
+    labels = EmailLabelSerializer(many=True, read_only=True)
+    sent_date = serializers.ReadOnlyField()
+
+    class Meta:
+        model = EmailMessage
+        fields = (
+            'id',
+            'account',
+            'labels',
+            'sent_date',
+            'body_html',
+            'body_text',
+            'received_by',
+            'received_by_cc',
+            'sender',
+            'attachments',
+            'read',
+            'subject',
+            'is_starred',
+            'is_spam',
+            'is_draft',
+            'is_archived',
+            'reply_to',
+        )
+
+    def to_representation(self, instance):
+        # TODO: Verify if the right fields are returned for each privacy setting.
+
+        user = self.context['request'].user
+        email_account = instance.account
+
+        ret = super(EmailMessageSerializer, self).to_representation(instance)
+
+        if email_account.owner == user:
+            fields_to_pop = []  # AKA, return every field.
+        else:
+            shared_config = email_account.sharedemailconfig_set.filter(user=user).first()
+            if shared_config:
+                privacy = shared_config.privacy
+            else:
+                privacy = email_account.privacy
+
+            if privacy == EmailAccount.METADATA:
+                fields_to_pop = [
+                    # 'id',
+                    'account',
+                    'labels',
+                    # 'sent_date',
+                    'body_html',
+                    'body_text',
+                    # 'received_by',
+                    # 'received_by_cc',
+                    # 'sender',
+                    'attachments',
+                    'read',
+                    'subject',
+                    'is_starred',
+                    'is_spam',
+                    'is_draft',
+                    'is_archived',
+                    'reply_to',
+                ]
+            elif privacy == EmailAccount.PRIVATE:
+                fields_to_pop = [
+                    # 'id',
+                    'account',
+                    'labels',
+                    'sent_date',
+                    'body_html',
+                    'body_text',
+                    'received_by',
+                    'received_by_cc',
+                    'sender',
+                    'attachments',
+                    'read',
+                    'subject',
+                    'is_starred',
+                    'is_spam',
+                    'is_draft',
+                    'is_archived',
+                    'reply_to',
+                ]
+            else:
+                fields_to_pop = []  # AKA, return every field.
+
+            if privacy is not None:
+                ret.update({'privacy': privacy})
+
+        [ret.pop(field, '') for field in fields_to_pop]
+
+        return ret
 
 
 class RelatedEmailAccountSerializer(RelatedSerializerMixin, EmailAccountSerializer):

@@ -593,6 +593,13 @@ class GmailManager(object):
         else:
             self.update_unread_count()
 
+    # def search(self, query):
+    #     try:
+    #         messages = self.connector.search(query)
+    #     except NotFoundError:
+    #         pass
+
+
     def cleanup(self):
         """
         Cleanup references, to prevent reference cycle.

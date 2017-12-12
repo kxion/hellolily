@@ -410,6 +410,32 @@ class GmailConnector(object):
             ))
         return response
 
+    def search(self, query, max_results=100):
+        # TODO: max_results is ignored.
+        response = self.execute_service_call(
+            self.gmail_service.service.users().messages().list(
+                maxResults=max_results,
+                userId='me',
+                q=query,
+            ))
+
+        messages = response.get('messages', [])
+
+        # Check if there are more pages.
+        while 'nextPageToken' in response:
+            page_token = response.get('nextPageToken')
+            response = self.execute_service_call(
+                self.gmail_service.service.users().messages().list(
+                    maxResults=max_results,
+                    userId='me',
+                    q=query,
+                    pageToken=page_token,
+                ))
+
+            messages.extend(response.get('messages', []))
+
+        return messages
+
     def cleanup(self):
         """
         Cleanup references, to prevent reference cycle.
