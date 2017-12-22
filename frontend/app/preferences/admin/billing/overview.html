@@ -44,10 +44,6 @@
                 <div ng-if="vm.subscription.status !== 'cancelled' && !currentUser.tenant.isFreePlan" class="cancel-subscription">
                     <a ng-click="vm.cancelSubscription()">Cancel subscription</a>
                 </div>
-
-                <div ng-if="!currentUser.tenant.trialStarted">
-                    <a ng-click="vm.startTrial()">Start trial</a>
-                </div>
             </div>
             <div class="widget-content" ng-if="!vm.subscription">
                 No subscription setup yet <a ui-sref="base.preferences.admin.billing.edit"><i class="lilicon hl-edit-icon"></i> Set up subscription</a>

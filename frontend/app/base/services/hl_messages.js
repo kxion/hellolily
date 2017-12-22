@@ -86,9 +86,6 @@ function HLMessages() {
                 subscription: {
                     cancelTitle: 'Are you sure?',
                     cancelText: 'You are about to cancel your subscription. This will revert your account back to the free plan after the next billing date. Are you sure you want to continue?',
-                    trialStartTitle: 'Start trial?',
-                    trialStartText: 'Are you sure you want to start your 30 day trial of the professional plan?',
-                    trialConfirm: 'Start trial',
                 },
                 confirmButtonText: 'Yes, cancel!',
                 twoFactorAuth: {

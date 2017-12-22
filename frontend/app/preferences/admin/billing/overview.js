@@ -35,7 +35,6 @@ function BillingOverviewController($filter, $scope, $state, $window, Billing, bi
     vm.downloadInvoice = downloadInvoice;
     vm.cancelSubscription = cancelSubscription;
     vm.getTrialRemaining = getTrialRemaining;
-    vm.startTrial = startTrial;
 
     activate();
 
@@ -71,22 +70,6 @@ function BillingOverviewController($filter, $scope, $state, $window, Billing, bi
                     }
                 }, error => {
                     toastr.error('Uh oh, there seems to be a problem', 'Oops!');
-                });
-            }
-        }).done();
-    }
-
-    function startTrial() {
-        swal({
-            title: messages.alerts.preferences.subscription.trialStartTitle,
-            html: messages.alerts.preferences.subscription.trialStartText,
-            type: 'warning',
-            showCancelButton: true,
-            confirmButtonText: messages.alerts.preferences.subscription.trialConfirm,
-        }).then(isConfirm => {
-            if (isConfirm) {
-                Billing.startTrial().$promise.then(response => {
-                    $window.location.reload();
                 });
             }
         }).done();
