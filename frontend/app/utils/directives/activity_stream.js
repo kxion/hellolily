@@ -456,11 +456,11 @@ function ActivityStreamDirective($filter, $q, $state, Account, Case, Change, Con
                         let emailMessageList = results[1];
 
                         emailMessageList.forEach(email => {
-                            User.search({filterquery: 'email:' + email.sender_email, is_active: 'All'}).$promise.then(userResults => {
+                            User.search({filterquery: 'email:' + email.sender.email_address, is_active: 'All'}).$promise.then(userResults => {
                                 if (userResults.objects[0]) {
                                     email.profile_picture = userResults.objects[0].profile_picture;
                                 } else {
-                                    email.profile_picture = HLGravatar.getGravatar(email.sender_email);
+                                    email.profile_picture = HLGravatar.getGravatar(email.sender.email_address);
                                 }
                             });
 
@@ -471,7 +471,6 @@ function ActivityStreamDirective($filter, $q, $state, Account, Case, Change, Con
                             });
 
                             activity.push(email);
-
                         });
                     });
                 }

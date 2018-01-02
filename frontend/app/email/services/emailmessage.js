@@ -63,13 +63,6 @@ function EmailMessage($resource, $q) {
                     size: 20,
                 },
             },
-            history: {
-                method: 'GET',
-                url: '/api/messaging/email/email/:id/history/',
-                params: {
-                    id: '@id',
-                },
-            },
             spam: {
                 method: 'PUT',
                 url: '/api/messaging/email/email/:id/spam/',

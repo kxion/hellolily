@@ -388,7 +388,6 @@ function EmailListController($scope, $state, $stateParams, EmailAccount, EmailLa
 
     function _reloadMessages() {
         if ($stateParams.accountId) {
-
             if ($stateParams.labelId) {
                 // Get the label for the given accountId.
                 EmailLabel.query({
@@ -446,15 +445,15 @@ function EmailListController($scope, $state, $stateParams, EmailAccount, EmailLa
     }
 
     function listEmailAddresses(addresses) {
-        var str = '';
-        var i;
+        let emailNames = [];
+        let i;
         for (i = 0; i < addresses.length; i++) {
             if (addresses[i].name) {
-                str += addresses[i].name + ', ';
+                emailNames.push(addresses[i].name);
             } else {
-                str += addresses[i].email_address + ', ';
+                emailNames.push(addresses[i].email_address);
             }
         }
-        return str.substring(0, str.length-2);
+        return emailNames.join(', ');
     }
 }

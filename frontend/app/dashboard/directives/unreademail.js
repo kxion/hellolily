@@ -63,19 +63,19 @@ function UnreadEmailController($scope, $interval, EmailAccount, EmailMessage, HL
 
     function updateTable(blockUI = false) {
         var sort = HLUtils.getSorting(vm.table.order.column, vm.table.order.descending);
-        var accountFilter = '';
 
         if (blockUI) HLUtils.blockUI('#unreadEmailBlockTarget', true);
 
-        if (vm.table.accountFilter) {
-            accountFilter = vm.table.accountFilter;
-        }
-
-        EmailMessage.search({
-            account: accountFilter,
+        let searchParams = {
             label: 'INBOX',
             sort: sort,
-        }, function(data) {
+            read: 0,
+        };
+        if (vm.table.accountFilter) {
+            searchParams.account = vm.table.accountFilter;
+        }
+
+        EmailMessage.search(searchParams, function(data) {
             vm.table.items = data.hits;
 
             if (blockUI) HLUtils.unblockUI('#unreadEmailBlockTarget');

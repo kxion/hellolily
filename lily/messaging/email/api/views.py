@@ -1,9 +1,8 @@
 import logging
 
-from django.conf import settings, Settings
+from django.conf import settings
 from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.db.models import Q
-from django.utils.datastructures import MultiValueDictKeyError
 from django_filters.rest_framework import DjangoFilterBackend, FilterSet
 import phonenumbers
 from rest_framework import viewsets, mixins, status, filters
@@ -17,7 +16,6 @@ from lily.accounts.models import Account
 from lily.contacts.models import Contact
 from lily.messaging.email.connector import GmailConnector
 from lily.messaging.email.utils import get_email_parameter_api_dict, reindex_email_message, get_shared_email_accounts
-from lily.search.lily_search import LilySearch
 from lily.users.models import UserInfo
 from lily.users.api.serializers import LilyUserSerializer
 from lily.utils.functions import format_phone_number
@@ -288,74 +286,6 @@ class EmailMessageViewSet(mixins.RetrieveModelMixin,
         toggle_spam_email_message.delay(email.id, spam=request.data['markAsSpam'])
         return Response(serializer.data)
 
-    @detail_route(methods=['get'])
-    def history(self, request, pk):
-        """
-        Returns what happened to an email; did the user reply or forwarded the email message.
-        """
-        email = self.get_object()
-
-        account_email = email.account.email_address
-        sent_from_account = (account_email == email.sender.email_address)
-
-        # Get the messages in the thread for the current email message.
-        search = LilySearch(
-            request.user.tenant_id,
-            model_type='email_emailmessage',
-            sort='sent_date',
-            size=100  # Paged results, when a thread is containing more that 100 results StopIteration could be thrown.
-        )
-        search.filter_query('thread_id:%s' % email.thread_id)
-        thread, facets, total, took = search.do_search([
-            'message_id',
-            'received_by_email',
-            'received_by_cc_email',
-            'sender_email',
-            'sender_name',
-            'sent_date',
-        ])
-
-        try:
-            # Get the index of the current email message in the thread.
-            index = (key for key, item in enumerate(thread) if item['message_id'] == email.message_id).next()
-        except StopIteration:
-            logger.exception('Number of messages larger that search page size for message %s.' % email.id)
-            results = {}
-            return Response(results)
-
-        # Only look at the messages in the thread after the current email message.
-        messages_after = thread[index + 1:]
-
-        results = {}
-
-        if not messages_after or sent_from_account:
-            # Current email message is the last in the thread or is send by the user and therefor not a possible reply
-            # or forwarded email message.
-            return Response(results)
-
-        # The current email message isn't the last in the thread. So look the follow up messages in the thread to
-        # determine what actions occured on the current email message. Current email message is not send from the
-        # account of the user, so it is a received email message. So determine is we replied or forwarded it.
-
-        # Get all the outgoing follow up messages in the thread.
-        next_messages = [item for item in messages_after if item['sender_email'] == account_email]
-        if len(next_messages):
-            # We only need to look at the first follow up message in the thread.
-            # TODO LILY-2244: improve search filter above so it leads to the only / first follow up message.
-            next_message = next_messages[0]
-
-            # Get all the mail addresses where the follow up message was sent to.
-            email_addresses = next_message.get('received_by_email', []) + next_message.get('received_by_cc_email', [])
-
-            if email_addresses.count(email.sender.email_address):
-                # The sender of the current, received email message is one of the reciepents of the follow up message,
-                # so it is a reply message.
-                results['replied_with'] = next_message
-            else:
-                results['forwarded_with'] = next_message
-
-        return Response(results)
-
     @detail_route(methods=['post'])
     def extract(self, request, pk=None):
         """
@@ -512,7 +442,7 @@ class TemplateVariableViewSet(mixins.DestroyModelMixin,
         return Response(template_variables)
 
 
-class GmailSearchView(APIView):
+class SearchView(APIView):
 
     # TODO: SECURITY
 
@@ -526,7 +456,7 @@ class GmailSearchView(APIView):
 
         # Paging parameters.
         page = request.query_params.get('page', '0')
-        page = int(page)+1
+        page = int(page) + 1
         size = int(request.query_params.get('size', '20'))
         sort = request.query_params.get('sort', '-sent_date')
 
@@ -542,6 +472,8 @@ class GmailSearchView(APIView):
         # Additional filtering.
         date_start = request.query_params.get('date_start', None)
         date_end = request.query_params.get('date_end', None)
+        thread_id = request.query_params.get('thread', None)
+        include_sent = request.query_params.get('sent', (related_contact_id or related_account_id))
 
         if related_account_id and related_contact_id:
             # If provided, only provide one related_x field.
@@ -587,11 +519,15 @@ class GmailSearchView(APIView):
         else:
             # User isn't searching at all, just show the email for current box. Where current email box is:
             # 1. A combination of included and excluded labels.
-            included, excluded = self._determineLabels(label_id, email_accounts,
-                                                       include_sent=(related_contact_id or related_account_id))
+            included, excluded = self._determineLabels(label_id, email_accounts, include_sent=include_sent)
             message_list = EmailMessage.objects.filter(
                 account__in=email_accounts,
             )
+
+            if thread_id:
+                message_list = message_list.filter(
+                    thread_id=thread_id
+                )
 
             # 2. or a combination of mail sent or received by a related account (used in the activity stream).
             if related_account_id:
@@ -624,7 +560,7 @@ class GmailSearchView(APIView):
                     labels__in=excluded
                 )
 
-        # Apply read status filtering.
+        # Apply additional filtering.
         if read is not None:  # For example used in the dashboard widget.
             message_list = message_list.filter(
                 read=read

@@ -55,20 +55,17 @@ function HLFilters() {
         if (separateFilterStrings.length) {
             filterStrings.push('(' + separateFilterStrings.join(' OR ') + ')');
         }
-        //
-        // if (accountFilterStrings.length) {
-        //     filterStrings.push( accountFilterStrings.join(',') );
-        // }
 
         if (viewModel.table.usersFilter) {
             filterStrings.push('(' + viewModel.table.usersFilter + ')');
         }
 
-        // Finally join all filters AND-wise.
-        viewModel.table.filterQuery = filterStrings.join(' AND ');
         if (accountFilterStrings.length) {
             viewModel.table.accountFilter = accountFilterStrings.join(',');
         }
+
+        // Finally join all filters AND-wise.
+        viewModel.table.filterQuery = filterStrings.join(' AND ');
     };
 
     this._displayClearButtons = viewModel => {

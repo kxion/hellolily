@@ -4,7 +4,6 @@ from django.db.models import Q
 from django.utils.translation import ugettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.fields import CurrentUserDefault
 from templated_email import send_templated_mail
 
 from lily.api.fields import DynamicQuerySetPrimaryKeyRelatedField
@@ -313,6 +312,7 @@ class EmailMessageSerializer(serializers.ModelSerializer):
             'is_draft',
             'is_archived',
             'reply_to',
+            'thread_id',
         )
 
     def to_representation(self, instance):
@@ -351,6 +351,7 @@ class EmailMessageSerializer(serializers.ModelSerializer):
                     'is_draft',
                     'is_archived',
                     'reply_to',
+                    'thread_id',
                 ]
             elif privacy == EmailAccount.PRIVATE:
                 fields_to_pop = [
@@ -371,6 +372,7 @@ class EmailMessageSerializer(serializers.ModelSerializer):
                     'is_draft',
                     'is_archived',
                     'reply_to',
+                    'thread_id',
                 ]
             else:
                 fields_to_pop = []  # AKA, return every field.
